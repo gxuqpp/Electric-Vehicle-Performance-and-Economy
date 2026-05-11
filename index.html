@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电动汽车动力性与经济性仿真工具</title>
+<style>
+:root{--bg:#0c1825;--sur:#152030;--card:#1b2d48;--brd:#264070;--acc:#29d0ff;--grn:#2dffa0;--ylw:#ffd060;--wrn:#ff7040;--pur:#c070ff;--txt:#e8f4ff;--mut:#8ab0d0;--mono:'Courier New',monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"微软雅黑","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);font-size:17px;}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(135deg,#060c18,#0d2258,#081830);border-bottom:3px solid var(--brd);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.hdr-icon{font-size:34px;line-height:1;}
+.hdr h1{font-size:21px;color:#fff;font-weight:700;letter-spacing:0.03em;}
+.hdr p{font-size:14px;color:rgba(255,255,255,0.75);margin-top:4px;}
+.hdr-badge{margin-left:auto;background:linear-gradient(135deg,var(--acc),var(--grn));color:#001020;font-size:13px;font-family:var(--mono);padding:6px 14px;border-radius:12px;font-weight:700;white-space:nowrap;}
+
+/* ── SIDEBAR TOGGLE (mobile) ── */
+.sidebar-toggle{display:none;width:100%;padding:12px;background:#152030;border:none;border-bottom:1px solid var(--brd);color:var(--acc);font-size:16px;font-family:var(--mono);cursor:pointer;text-align:left;font-weight:700;}
+
+/* ── TABS ── */
+.tabs{display:flex;background:#080f1e;border-bottom:3px solid var(--brd);padding:0 8px;gap:1px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:12px 14px;font-size:15px;cursor:pointer;color:var(--mut);border-bottom:4px solid transparent;white-space:nowrap;transition:.15s;margin-bottom:-3px;font-weight:600;}
+.tab:hover{color:var(--acc);}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);font-weight:700;background:var(--card);border-radius:5px 5px 0 0;}
+.tab.eco{color:#c070ff99;}
+.tab.eco:hover{color:var(--pur);}
+.tab.eco.active{color:var(--pur);border-bottom-color:var(--pur);}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 118px);}
+.sidebar{background:#0d1a28;border-right:2px solid var(--brd);padding:12px;overflow-y:auto;}
+.main-area{overflow:hidden;}
+.ct{display:none;height:100%;overflow-y:auto;padding:16px;}
+.ct.active{display:block;}
+
+/* ── PANELS ── */
+.panel{background:var(--card);border:1px solid var(--brd);border-radius:8px;margin-bottom:10px;}
+.ph{padding:10px 14px;border-bottom:1px solid var(--brd);font-size:14px;font-family:var(--mono);color:var(--acc);letter-spacing:.05em;display:flex;align-items:center;gap:7px;font-weight:700;}
+.ph.eco-ph{color:var(--pur);}
+.ph .dot{width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;}
+.ph .dot.eco-dot{background:var(--pur);}
+.pb{padding:12px;}
+
+/* ── FIELDS ── */
+.field{margin-bottom:9px;}
+.field label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px;font-family:var(--mono);}
+.field label em{color:var(--ylw);font-style:normal;font-weight:700;}
+.field input{width:100%;padding:8px 10px;background:#091420;border:1px solid var(--brd);border-radius:5px;color:var(--txt);font-size:15px;font-family:var(--mono);}
+.field input:focus{outline:none;border-color:var(--acc);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+/* ── BUTTONS ── */
+.btn{padding:12px 16px;border:none;border-radius:7px;font-size:16px;font-family:var(--mono);cursor:pointer;font-weight:700;transition:.15s;}
+.btn-p{background:linear-gradient(135deg,var(--acc),#0090d0);color:#001525;width:100%;margin-top:10px;}
+.btn-p:hover{background:linear-gradient(135deg,#50e8ff,#00b0f0);}
+.btn-s{background:var(--card);color:var(--txt);font-size:14px;padding:8px 10px;width:100%;margin-top:6px;border:1px solid var(--brd);}
+.btn-sm{background:#0d1e32;color:var(--mut);font-size:13px;padding:6px 11px;border:1px solid var(--brd);border-radius:4px;cursor:pointer;font-family:var(--mono);}
+.btn-sm:hover{border-color:var(--acc);color:var(--acc);}
+
+/* ── LABELS / TAGS ── */
+.sl{font-size:14px;font-family:var(--mono);color:var(--acc);letter-spacing:.06em;margin:8px 0 5px;font-weight:700;}
+.cw{background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:12px;margin-bottom:12px;}
+.ct-title{font-size:15px;color:var(--acc);font-family:var(--mono);margin-bottom:9px;font-weight:700;}
+.ct-title.eco{color:var(--pur);}
+canvas{display:block;width:100%;}
+
+/* ── STAT CARDS ── */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:12px;}
+.sc{background:#111e30;border:1px solid var(--brd);border-radius:7px;padding:12px;}
+.sc .sl2{font-size:13px;color:var(--mut);margin-bottom:4px;}
+.sc .sv{font-size:24px;font-weight:700;color:var(--acc);font-family:var(--mono);}
+.sc.ok .sv{color:var(--grn);}
+.sc.hi .sv{color:var(--ylw);}
+.sc.wa .sv{color:var(--wrn);}
+.sc.pu .sv{color:var(--pur);}
+
+/* ── REF BOXES ── */
+.ref{background:#091e32;border-left:4px solid var(--acc);padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px;color:#b8d8f8;margin:7px 0;font-family:var(--mono);line-height:1.8;}
+.ref.eco-ref{border-left-color:var(--pur);color:#ddb8ff;}
+
+/* ── TABLES ── */
+.rr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--brd);font-size:15px;}
+.rr:last-child{border-bottom:none;}
+.rr .l{color:var(--mut);}
+.rr .v{font-family:var(--mono);font-weight:700;color:var(--grn);}
+.ct-tbl{width:100%;border-collapse:collapse;font-size:15px;}
+.ct-tbl th{background:#182e50;padding:10px 12px;text-align:left;color:#c0d8ff;border:1px solid var(--brd);}
+.ct-tbl td{padding:9px 12px;border:1px solid var(--brd);color:var(--txt);}
+.ct-tbl tr:hover td{background:#1a2e50;}
+.mt{width:100%;border-collapse:collapse;font-size:14px;font-family:var(--mono);}
+.mt th{background:#182840;color:var(--acc);padding:7px 4px;text-align:center;border:1px solid var(--brd);font-size:13px;}
+.mt td{padding:3px 2px;border:1px solid var(--brd);}
+.mt input{width:100%;padding:5px 6px;background:#091420;border:none;color:var(--txt);font-size:14px;font-family:var(--mono);text-align:center;}
+.mt input:focus{outline:1px solid var(--acc);background:#0f2035;}
+.mt .idx{color:var(--mut);text-align:center;font-size:13px;padding:3px;}
+.rdel{color:#ee4444;cursor:pointer;padding:0 6px;font-size:15px;}
+.rdel:hover{color:#ff6060;}
+
+/* ── SUB-TABS ── */
+.stabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.stab{padding:7px 13px;border:1px solid var(--brd);border-radius:5px;font-size:14px;cursor:pointer;color:var(--mut);font-family:var(--mono);}
+.stab.active{background:var(--acc);color:#001525;border-color:var(--acc);font-weight:700;}
+.stab.eco-stab.active{background:var(--pur);color:#fff;border-color:var(--pur);}
+
+/* ── MISC ── */
+.empty-hint{text-align:center;color:var(--mut);font-size:17px;padding:70px 0;font-family:var(--mono);}
+.fac-panel{display:none;}.fac-panel.active{display:block;}
+.chart-solo{max-width:740px;margin:0 auto 12px;}
+.fac-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.eco-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  .hdr h1{font-size:18px;}
+  .hdr p{font-size:13px;}
+  .hdr-badge{font-size:12px;padding:5px 10px;}
+  .sidebar-toggle{display:block;}
+  .sidebar{transition:max-height .3s ease;overflow:hidden;}
+  .sidebar.collapsed{max-height:0;padding:0;border:none;}
+  .sidebar.expanded{max-height:9999px;padding:12px;}
+  .layout{grid-template-columns:1fr;height:auto;min-height:calc(100vh - 118px);}
+  .main-area{overflow:visible;}
+  .ct{height:auto;min-height:60vh;}
+  .fac-row{grid-template-columns:1fr;}
+  .eco-row3{grid-template-columns:1fr;}
+  .g3{grid-template-columns:1fr 1fr;}
+  .chart-solo{max-width:100%;}
+  .tab{padding:10px 10px;font-size:14px;}
+  .sg{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
+}
+@media(max-width:480px){
+  .hdr{padding:10px 12px;}
+  .hdr h1{font-size:16px;}
+  .g2{grid-template-columns:1fr;}
+  .g3{grid-template-columns:1fr 1fr;}
+  .tab{padding:9px 8px;font-size:13px;}
+  .sc .sv{font-size:20px;}
+  .stab{font-size:13px;padding:6px 10px;}
+}
+user-select: none
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-icon">⚡</div>
+  <div>
+    <h1>电动汽车动力性与经济性仿真工具 · 广西大学 · 车辆工程专业 · 《汽车设计》课程教学团队</h1>
+    <p>电机特性拟合 · 整车动力性经济性仿真 · 等速续驶里程· NEDC循环续驶里程</p>
+  </div>
+  <div class="hdr-badge">EV · 动力性 &amp; 经济性</div>
+</div>
+
+<div class="tabs" id="tabBar">
+  <div class="tab active" onclick="sw(0)">⚙️ 参数</div>
+  <div class="tab" onclick="sw(1)">① 电机特性</div>
+  <div class="tab" onclick="sw(2)">② 驱动力图</div>
+  <div class="tab" onclick="sw(3)">③ 加速度</div>
+  <div class="tab" onclick="sw(4)">④ v-t曲线</div>
+  <div class="tab" onclick="sw(5)">⑤ 爬坡度</div>
+  <div class="tab" onclick="sw(6)">⑥ 动力影响因素</div>
+  <div class="tab eco" onclick="sw(7)">⑦ 等速续驶里程</div>
+  <div class="tab eco" onclick="sw(8)">⑧ NEDC循环续驶</div>
+  <div class="tab" onclick="sw(9)">📋 汇总</div>
+</div>
+
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰ 展开/收起参数面板</button>
+
+<div class="layout">
+<aside class="sidebar expanded" id="sidebar">
+  <div class="panel">
+    <div class="ph"><span class="dot"></span>电机转速–转矩数据点</div>
+    <div class="pb">
+      <table class="mt" id="motorTable">
+        <thead><tr><th>#</th><th>转速 r/min</th><th>转矩 N·m</th><th></th></tr></thead>
+        <tbody id="motorTbody"></tbody>
+      </table>
+      <div style="display:flex;gap:5px;margin-top:6px;">
+        <button class="btn-sm" onclick="addRow()">＋ 添加行</button>
+        <button class="btn-sm" onclick="resetMotorData()">↺ 重置</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><span class="dot"></span>整车参数</div>
+    <div class="pb">
+      <div class="g2">
+        <div class="field"><label><em>m</em> 整车质量 kg</label><input type="number" id="p_m" value="1200"></div>
+        <div class="field"><label><em>r</em> 轮胎半径 m</label><input type="number" id="p_r" value="0.3" step="0.001"></div>
+        <div class="field"><label><em>Cᴅ</em> 空气阻力系数</label><input type="number" id="p_Cd" value="0.28" step="0.01"></div>
+        <div class="field"><label><em>A</em> 迎风面积 m²</label><input type="number" id="p_A" value="2.0" step="0.1"></div>
+        <div class="field"><label><em>f</em> 滚动阻力系数</label><input type="number" id="p_f" value="0.012" step="0.001"></div>
+        <div class="field"><label><em>ηₜ</em> 传动系统效率</label><input type="number" id="p_eta" value="0.9" step="0.01"></div>
+        <div class="field"><label><em>δ</em> 旋转质量系数</label><input type="number" id="p_delta" value="1.1" step="0.01"></div>
+        <div class="field"><label><em>iₜ</em> 总传动比</label><input type="number" id="p_it" value="8.3" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph eco-ph"><span class="dot eco-dot"></span>电池参数（经济性仿真用）</div>
+    <div class="pb">
+      <div class="g2">
+        <div class="field"><label><em>Qₘ</em> 额定容量 A·h</label><input type="number" id="b_Qm" value="100" step="5"></div>
+        <div class="field"><label><em>Uₑ</em> 额定电压 V</label><input type="number" id="b_Ue" value="320" step="10"></div>
+        <div class="field"><label><em>ηₑ</em> 放电效率</label><input type="number" id="b_etae" value="0.95" step="0.01"></div>
+        <div class="field"><label><em>ηⱼ</em> 机械传动效率</label><input type="number" id="b_etaj" value="0.92" step="0.01"></div>
+      </div>
+      <div class="ref eco-ref" style="margin-top:6px;">注：等速续驶公式使用 ηₜ×ηⱼ 作为综合效率<br>ηₑ 为电池放电效率</div>
+    </div>
+  </div>
+
+  <button class="btn btn-p" onclick="calcAll()">▶ 全部计算并绘图</button>
+  <button class="btn btn-s" onclick="resetAll()">↺ 恢复默认值</button>
+</aside>
+
+<div class="main-area">
+
+<!-- Tab 0: Intro -->
+<div class="ct active" id="ct0">
+  <div class="panel"><div class="ph"><span class="dot"></span>工具说明</div><div class="pb">
+    <div class="ref">
+      本工具集成<b>电动汽车动力性</b>与<b>经济性（续驶里程）</b>仿真计算，基于线性插值电机特性。<br>
+      输入电机转速–转矩数据、整车参数、电池参数，点击「全部计算并绘图」即可得到所有结果。
+    </div>
+    <div class="sl">▸ 动力性计算（①~⑥）</div>
+    <div class="ref">
+      驱动力 Ft = T(n)·iₜ·ηₜ/r &nbsp;|&nbsp; 空气阻力 Fw = Cᴅ·A·v²/21.15 &nbsp;|&nbsp; 滚动阻力 Ff = m·g·f<br>
+      最大加速度 a = (Ft−Ff−Fw)/(δ·m) &nbsp;|&nbsp; 最大爬坡度 i% = tan(arcsin((Ft−Fw−Ff)/(mg)))×100
+    </div>
+    <div class="sl">▸ 等速续驶里程（实例八，标签⑦）</div>
+    <div class="ref eco-ref">
+      S = 76.14·Qₘ·Uₑ·(ηₜ·ηⱼ)·ηₑ / (21.15·m·g·f + Cᴅ·A·u²) &nbsp;[km]<br>
+      分析电池容量、质量、滚动阻力、空气阻力、传动效率、放电效率对续驶里程的影响
+    </div>
+    <div class="sl">▸ NEDC循环续驶里程（实例九，标签⑧）</div>
+    <div class="ref eco-ref">
+      基于 NEDC 工况（4×市区循环 + 1×市郊循环 = 11.02 km/次），<br>
+      加速段：Ej = F·Sj/(3600·ηt·ηj·ηe) &nbsp;|&nbsp; 等速段：Ed = F·Sd/(3600·ηt·ηj·ηe)<br>
+      续驶里程 S = S₁ × E_总 / E₁ &nbsp;(总能量/单次循环消耗×单次循环里程)
+    </div>
+    <table class="ct-tbl" style="margin-top:10px;"><thead><tr><th>步骤</th><th>操作</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>输入电机数据</td><td>在左侧表格中输入转速–转矩数据点</td></tr>
+      <tr><td>2</td><td>设置整车参数</td><td>填入质量、轮胎、空阻、传动等参数</td></tr>
+      <tr><td>3</td><td>设置电池参数</td><td>填入容量 Qₘ、电压 Uₑ、放电效率 ηₑ、机械传动效率 ηⱼ</td></tr>
+      <tr><td>4</td><td>点击计算</td><td>点击「全部计算并绘图」，自动跳转到结果标签页</td></tr>
+    </tbody></table>
+  </div></div>
+</div>
+
+<!-- Tab 1: Motor -->
+<div class="ct" id="ct1">
+  <div id="motor_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="motor_content" style="display:none">
+    <div class="sg" id="motor_stats"></div>
+    <div class="g2" style="gap:10px;margin-bottom:10px;">
+      <div class="cw"><div class="ct-title">电机转矩–转速特性 (T-n)</div><canvas id="c_tn" height="280"></canvas></div>
+      <div class="cw"><div class="ct-title">电机功率–转速特性 (P-n)</div><canvas id="c_pn" height="280"></canvas></div>
+    </div>
+    <div class="ref">■ 实心点：原始数据点 &nbsp; — 实线：线性插值拟合曲线</div>
+  </div>
+</div>
+
+<!-- Tab 2: Force -->
+<div class="ct" id="ct2">
+  <div id="force_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="force_content" style="display:none">
+    <div class="chart-solo"><div class="cw"><div class="ct-title">驱动力–行驶阻力平衡图</div><canvas id="c_force" height="460"></canvas></div></div>
+    <div class="sg" id="force_stats"></div>
+  </div>
+</div>
+
+<!-- Tab 3: Accel -->
+<div class="ct" id="ct3">
+  <div id="accel_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="accel_content" style="display:none">
+    <div class="chart-solo"><div class="cw"><div class="ct-title">最大加速度–速度曲线</div><canvas id="c_accel" height="450"></canvas></div></div>
+    <div class="sg" id="accel_stats"></div>
+  </div>
+</div>
+
+<!-- Tab 4: VT -->
+<div class="ct" id="ct4">
+  <div id="vt_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="vt_content" style="display:none">
+    <div class="chart-solo"><div class="cw"><div class="ct-title">速度–时间曲线（0~100 km/h 加速过程）</div><canvas id="c_vt" height="450"></canvas></div></div>
+    <div class="sg" id="vt_stats"></div>
+  </div>
+</div>
+
+<!-- Tab 5: Grade -->
+<div class="ct" id="ct5">
+  <div id="grade_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="grade_content" style="display:none">
+    <div class="chart-solo"><div class="cw"><div class="ct-title">最大爬坡度–速度曲线</div><canvas id="c_grade" height="450"></canvas></div></div>
+    <div class="sg" id="grade_stats"></div>
+  </div>
+</div>
+
+<!-- Tab 6: Factor Analysis -->
+<div class="ct" id="ct6">
+  <div id="fac_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="fac_content" style="display:none">
+    <div class="stabs">
+      <div class="stab active" onclick="swFac(0)">峰值功率 Pm</div>
+      <div class="stab" onclick="swFac(1)">整车质量 m</div>
+      <div class="stab" onclick="swFac(2)">空气阻力系数 Cᴅ</div>
+    </div>
+    <div class="fac-panel active" id="fac_0">
+      <div class="ref" style="margin-bottom:8px">以基准峰值功率 Pm₀ 为基准，按比例缩放转矩曲线</div>
+      <div class="fac-row">
+        <div class="cw"><div class="ct-title">峰值功率 Pm vs 最高车速</div><canvas id="cf_pm_vmax" height="280"></canvas></div>
+        <div class="cw"><div class="ct-title">峰值功率 Pm vs 加速时间</div><canvas id="cf_pm_t100" height="280"></canvas></div>
+      </div>
+      <div class="cw"><div class="ct-title">峰值功率 Pm vs 最大爬坡度</div><canvas id="cf_pm_grade" height="260"></canvas></div>
+    </div>
+    <div class="fac-panel" id="fac_1">
+      <div class="ref" style="margin-bottom:8px">
+        <b>最高车速（式7-16）：</b>固定峰值功率，解析公式 m = [3600·ηₜ·Pm/u − Cd·A·u²/21.15]/(g·f)<br>
+        <b>加速时间/爬坡度：</b>数值仿真
+      </div>
+      <div class="fac-row">
+        <div class="cw"><div class="ct-title">整车质量 m vs 最高车速（式7-16）</div><canvas id="cf_m_vmax" height="280"></canvas></div>
+        <div class="cw"><div class="ct-title">整车质量 m vs 加速时间</div><canvas id="cf_m_t100" height="280"></canvas></div>
+      </div>
+      <div class="cw"><div class="ct-title">整车质量 m vs 最大爬坡度</div><canvas id="cf_m_grade" height="260"></canvas></div>
+    </div>
+    <div class="fac-panel" id="fac_2">
+      <div class="fac-row">
+        <div class="cw"><div class="ct-title">空气阻力系数 Cᴅ vs 最高车速</div><canvas id="cf_cd_vmax" height="280"></canvas></div>
+        <div class="cw"><div class="ct-title">空气阻力系数 Cᴅ vs 加速时间</div><canvas id="cf_cd_t100" height="280"></canvas></div>
+      </div>
+      <div class="cw"><div class="ct-title">空气阻力系数 Cᴅ vs 最大爬坡度</div><canvas id="cf_cd_grade" height="260"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 7: Constant Speed Range (Case 8) -->
+<div class="ct" id="ct7">
+  <div id="eco1_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="eco1_content" style="display:none">
+    <div class="sg" id="eco1_stats"></div>
+    <div class="stabs">
+      <div class="stab eco-stab active" onclick="swEco1(0)">基准曲线</div>
+      <div class="stab eco-stab" onclick="swEco1(1)">电池容量 Qₘ</div>
+      <div class="stab eco-stab" onclick="swEco1(2)">整车质量 m</div>
+      <div class="stab eco-stab" onclick="swEco1(3)">滚动阻力 f</div>
+      <div class="stab eco-stab" onclick="swEco1(4)">空气阻力 Cᴅ</div>
+      <div class="stab eco-stab" onclick="swEco1(5)">传动效率 ηₜ·ηⱼ</div>
+      <div class="stab eco-stab" onclick="swEco1(6)">放电效率 ηₑ</div>
+    </div>
+    <div class="fac-panel active" id="ep1_0">
+      <div class="ref eco-ref">基准参数下等速续驶里程随车速变化，对比三种电池容量（0.8×/1×/1.2×Qₘ）</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_base" height="380"></canvas></div></div>
+    </div>
+    <div class="fac-panel" id="ep1_1">
+      <div class="ref eco-ref">图8-1：电池额定容量 Qₘ 对等速续驶里程的影响（ΔQₘ = ±20 A·h）</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_qm" height="380"></canvas></div></div>
+    </div>
+    <div class="fac-panel" id="ep1_2">
+      <div class="ref eco-ref">图8-2：整车质量 m 对等速续驶里程的影响（质量越小，续驶里程越长）</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_m" height="380"></canvas></div></div>
+    </div>
+    <div class="fac-panel" id="ep1_3">
+      <div class="ref eco-ref">图8-3：滚动阻力系数 f 对等速续驶里程的影响（低滚阻轮胎可延长续驶里程）</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_f" height="380"></canvas></div></div>
+    </div>
+    <div class="fac-panel" id="ep1_4">
+      <div class="ref eco-ref">图8-4：空气阻力系数 Cᴅ 对等速续驶里程的影响（低 Cᴅ 在高速时优势明显）</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_cd" height="380"></canvas></div></div>
+    </div>
+    <div class="fac-panel" id="ep1_5">
+      <div class="ref eco-ref">图8-5/8-6：综合传动效率（ηₜ·ηⱼ）对等速续驶里程的影响</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_eta" height="380"></canvas></div></div>
+    </div>
+    <div class="fac-panel" id="ep1_6">
+      <div class="ref eco-ref">图8-7：电池放电效率 ηₑ 对等速续驶里程的影响</div>
+      <div class="chart-solo"><div class="cw"><canvas id="ec1_etae" height="380"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 8: NEDC Cycle Range (Case 9) -->
+<div class="ct" id="ct8">
+  <div id="eco2_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="eco2_content" style="display:none">
+    <div class="sg" id="eco2_stats"></div>
+    <div class="cw"><div class="ct-title eco">NEDC 循环工况速度–时间曲线</div><canvas id="ec2_nedc" height="250"></canvas></div>
+    <div class="stabs" style="margin-top:8px;">
+      <div class="stab eco-stab active" onclick="swEco2(0)">整车质量 m</div>
+      <div class="stab eco-stab" onclick="swEco2(1)">滚动阻力 f</div>
+      <div class="stab eco-stab" onclick="swEco2(2)">空气阻力 Cᴅ</div>
+      <div class="stab eco-stab" onclick="swEco2(3)">传动效率 ηₜ·ηⱼ</div>
+      <div class="stab eco-stab" onclick="swEco2(4)">放电效率 ηₑ</div>
+      <div class="stab eco-stab" onclick="swEco2(5)">电池能量 E</div>
+    </div>
+    <div class="fac-panel active" id="ep2_0"><div class="cw"><canvas id="ec2_m" height="320"></canvas></div></div>
+    <div class="fac-panel" id="ep2_1"><div class="cw"><canvas id="ec2_f" height="320"></canvas></div></div>
+    <div class="fac-panel" id="ep2_2"><div class="cw"><canvas id="ec2_cd" height="320"></canvas></div></div>
+    <div class="fac-panel" id="ep2_3"><div class="cw"><canvas id="ec2_eta" height="320"></canvas></div></div>
+    <div class="fac-panel" id="ep2_4"><div class="cw"><canvas id="ec2_etae" height="320"></canvas></div></div>
+    <div class="fac-panel" id="ep2_5"><div class="cw"><canvas id="ec2_E" height="320"></canvas></div></div>
+  </div>
+</div>
+
+<!-- Tab 9: Summary -->
+<div class="ct" id="ct9">
+  <div id="sum_empty" class="empty-hint">▶ 请先点击左侧「全部计算并绘图」按钮</div>
+  <div id="sum_content" style="display:none">
+    <div class="panel"><div class="ph"><span class="dot"></span>📋 动力性与经济性仿真结果汇总</div><div class="pb">
+      <table class="ct-tbl"><thead><tr><th>计算项目</th><th>数值</th><th>说明</th></tr></thead>
+      <tbody id="sum_body"></tbody></table>
+    </div></div>
+    <div class="panel"><div class="ph"><span class="dot"></span>整车参数</div><div class="pb" id="sum_params"></div></div>
+  </div>
+</div>
+
+</div><!-- main-area -->
+</div><!-- layout -->
+
+<script>
+const GRAV=9.81, GRAV_E=9.8; // 9.81 for dynamics, 9.8 for economic calcs (matches textbook)
+const DEF_SPD=[500,1000,1500,2000,2500,3000,3500,4000,4500,5000,5500,6000,6500,7000,8000,9000];
+const DEF_TRQ=[160,160,160,160,160,160,160,155.18,137.94,124.15,112.86,103.45,95.5,88.67,77.59,68.97];
+const LC=['#29d0ff','#2dffa0','#ffd060','#ff7040','#c070ff'];
+let RES=null, rowCount=0;
+
+// ── TAB SWITCHING ──
+function sw(i){
+  document.querySelectorAll('.ct').forEach((c,k)=>c.classList.toggle('active',k===i));
+  document.querySelectorAll('.tab').forEach((t,k)=>t.classList.toggle('active',k===i));
+}
+function swFac(i){
+  document.querySelectorAll('.fac-panel').forEach((p,k)=>p.classList.toggle('active',k===i));
+  document.querySelectorAll('.stab:not(.eco-stab)').forEach((t,k)=>t.classList.toggle('active',k===i));
+}
+function swEco1(i){
+  document.querySelectorAll('#ct7 .fac-panel').forEach((p,k)=>p.classList.toggle('active',k===i));
+  document.querySelectorAll('#ct7 .stab').forEach((t,k)=>t.classList.toggle('active',k===i));
+}
+function swEco2(i){
+  document.querySelectorAll('#ct8 .fac-panel').forEach((p,k)=>p.classList.toggle('active',k===i));
+  document.querySelectorAll('#ct8 .stab').forEach((t,k)=>t.classList.toggle('active',k===i));
+}
+
+// ── MOTOR TABLE ──
+function buildMotorTable(spds,trqs){rowCount=0;document.getElementById('motorTbody').innerHTML='';spds.forEach((s,i)=>addRowData(s,trqs[i]));}
+function addRowData(spd,trq){
+  const tbody=document.getElementById('motorTbody');
+  const tr=document.createElement('tr'); tr.className='motor-row';
+  tr.innerHTML=`<td class="idx">${++rowCount}</td>
+    <td><input type="number" class="si" value="${spd}" step="100" min="1"></td>
+    <td><input type="number" class="ti" value="${trq}" step="0.01" min="0"></td>
+    <td><span class="rdel" onclick="this.closest('tr').remove();renum()">✕</span></td>`;
+  tbody.appendChild(tr);
+}
+function addRow(){const rows=document.querySelectorAll('.motor-row');addRowData(rows.length?(parseFloat(rows[rows.length-1].querySelector('.si').value)+500):500,100);renum();}
+function renum(){document.querySelectorAll('.motor-row').forEach((r,i)=>r.querySelector('.idx').textContent=i+1);}
+function resetMotorData(){buildMotorTable(DEF_SPD,DEF_TRQ);}
+function resetAll(){
+  resetMotorData();
+  document.getElementById('p_m').value=1200; document.getElementById('p_r').value=0.3;
+  document.getElementById('p_Cd').value=0.28; document.getElementById('p_A').value=2.0;
+  document.getElementById('p_f').value=0.012; document.getElementById('p_eta').value=0.9;
+  document.getElementById('p_delta').value=1.1; document.getElementById('p_it').value=8.3;
+  document.getElementById('b_Qm').value=100; document.getElementById('b_Ue').value=320;
+  document.getElementById('b_etae').value=0.95; document.getElementById('b_etaj').value=0.92;
+}
+function getMotorData(){
+  const pairs=[];
+  document.querySelectorAll('.motor-row').forEach(r=>{
+    const s=parseFloat(r.querySelector('.si').value),t=parseFloat(r.querySelector('.ti').value);
+    if(!isNaN(s)&&!isNaN(t)&&s>0&&t>=0) pairs.push([s,t]);
+  });
+  pairs.sort((a,b)=>a[0]-b[0]);
+  return{speeds:pairs.map(p=>p[0]),torques:pairs.map(p=>p[1])};
+}
+function getP(){return{m:+document.getElementById('p_m').value||1200,r:+document.getElementById('p_r').value||0.3,Cd:+document.getElementById('p_Cd').value||0.28,A:+document.getElementById('p_A').value||2.0,f:+document.getElementById('p_f').value||0.012,eta:+document.getElementById('p_eta').value||0.9,delta:+document.getElementById('p_delta').value||1.1,it:+document.getElementById('p_it').value||8.3};}
+function getBP(){return{Qm:+document.getElementById('b_Qm').value||100,Ue:+document.getElementById('b_Ue').value||320,etae:+document.getElementById('b_etae').value||0.95,etaj:+document.getElementById('b_etaj').value||0.92};}
+
+// ── PHYSICS ──
+function lerpTq(n,spds,trqs){
+  if(n<=0)return 0; if(n<spds[0])return trqs[0]; if(n>spds[spds.length-1])return 0;
+  for(let i=0;i<spds.length-1;i++){if(n>=spds[i]&&n<=spds[i+1]){const t=(n-spds[i])/(spds[i+1]-spds[i]);return trqs[i]+t*(trqs[i+1]-trqs[i]);}}
+  return 0;
+}
+function v2n(v,p){return p.it*v/(0.377*p.r);}
+function getFt(v,p,spds,trqs){return lerpTq(v2n(v,p),spds,trqs)*p.it*p.eta/p.r;}
+function getFw(v,p){return p.Cd*p.A*v*v/21.15;}
+function getFf(p){return p.m*GRAV*p.f;}
+function getFr(v,p){return getFw(v,p)+getFf(p);}
+function getAcc(v,p,spds,trqs){return(getFt(Math.max(v,0.01),p,spds,trqs)-getFr(Math.max(v,0.01),p))/(p.delta*p.m);}
+function getGrade(v,p,spds,trqs){
+  const Ft=getFt(Math.max(v,0.01),p,spds,trqs),Fw=getFw(Math.max(v,0.01),p),Ff=getFf(p),W=p.m*GRAV;
+  let s=(Ft-Fw-Ff)/W; if(s<=0)return 0; if(s>0.95)s=0.95;
+  return Math.tan(Math.asin(s))*100;
+}
+function findVmax(p,spds,trqs){
+  const vLim=0.377*p.r*spds[spds.length-1]/p.it; let vmax=0;
+  for(let v=0.5;v<=vLim;v+=0.5){if(getFt(v,p,spds,trqs)>=getFr(v,p))vmax=v;else break;}
+  return vmax;
+}
+function findVmaxExt(p,spds,trqs){
+  const nEnd=spds[spds.length-1],Tend=trqs[trqs.length-1],vLim=0.377*p.r*nEnd/p.it;
+  let vmax=0;
+  for(let v=0.5;v<=vLim;v+=0.5){if(getFt(v,p,spds,trqs)>=getFr(v,p))vmax=v;else break;}
+  if(vmax>=vLim-1){for(let v=vLim+0.5;v<=vLim*3;v+=0.5){const T=Tend*nEnd/v2n(v,p);const Ft=T*p.it*p.eta/p.r;if(Ft>=getFr(v,p))vmax=v;else break;}}
+  return vmax;
+}
+function calcT100(p,spds,trqs){
+  let t=0;const dv=0.3;
+  for(let v=0.15;v<100;v+=dv){const a1=getAcc(v,p,spds,trqs),a2=getAcc(v+dv,p,spds,trqs);if(a1<0.01||a2<0.01)return 9999;t+=(dv/3.6)*0.5*(1/a1+1/a2);}
+  return t;
+}
+function calcVT(p,spds,trqs,vTarget){
+  const vtV=[0],vtT=[0];let v=0.01,tc=0;const dt=0.1;
+  for(let i=0;i<6000;i++){const a=getAcc(v,p,spds,trqs);if(a<0.001)break;v=Math.min(v+a*dt*3.6,vTarget+2);tc+=dt;vtV.push(v);vtT.push(tc);if(v>=vTarget+1)break;}
+  return{vtV,vtT};
+}
+
+// ── ECONOMIC CALC ──
+// Case 8: constant speed range (km), u in km/h
+function constRange(u, p, bp){
+  const et=p.eta*bp.etaj; // ηt * ηj
+  const num=76.14*bp.Qm*bp.Ue*et*bp.etae;
+  const den=21.15*p.m*GRAV_E*p.f+p.Cd*p.A*u*u;
+  return den>0?num/den:0;
+}
+
+// Case 9: NEDC energy and distance per single cycle
+function calcNEDCCycle(p, bp){
+  const g=GRAV_E, et=p.eta*bp.etaj, ee=bp.etae;
+  const m=p.m, f=p.f, Cd=p.Cd, A=p.A, delta=p.delta;
+  // S_accel(u0,uj,aj): km
+  function Sacc(u0,uj,aj){return Math.abs(uj*uj-u0*u0)/(25920*Math.abs(aj));}
+  // Energy for acceleration phase (kWh): force at terminal speed
+  function Ej(u0,uj,aj){
+    if(aj<=0)return 0;
+    const s=Sacc(u0,uj,aj);
+    const F=m*g*f+Cd*A*uj*uj/21.15+delta*m*aj;
+    return F*s/(3600*et*ee);
+  }
+  // S_const(u,t): km
+  function Sct(u,t){return u*t/3600;}
+  // Energy for constant speed (kWh)
+  function Ed(u,t){
+    const s=Sct(u,t);
+    const F=m*g*f+Cd*A*u*u/21.15;
+    return F*s/(3600*et*ee);
+  }
+
+  // ── Urban basic cycle (phases with energy/distance)
+  const Eu=Ej(0,15,1.04)+Ed(15,8)+Ej(0,15,0.69)+Ej(15,32,0.79)+Ed(32,24)+
+           Ej(0,15,0.69)+Ej(15,35,0.51)+Ej(35,50,0.46)+Ed(50,12)+Ed(35,15);
+  // All urban distances (including deceleration)
+  const Su=Sacc(0,15,1.04)+Sct(15,8)+Sacc(15,0,0.83)+
+           Sacc(0,15,0.69)+Sacc(15,32,0.79)+Sct(32,24)+Sacc(32,0,0.81)+
+           Sacc(0,15,0.69)+Sacc(15,35,0.51)+Sacc(35,50,0.46)+Sct(50,12)+Sacc(50,35,0.52)+Sct(35,15)+Sacc(35,0,0.97);
+
+  // ── Suburban cycle
+  const Es=Ej(0,15,0.69)+Ej(15,35,0.51)+Ej(35,50,0.42)+Ej(50,70,0.40)+
+           Ed(70,50)+Ej(50,70,0.43)+Ed(70,50)+Ej(70,100,0.24)+Ed(100,30)+
+           Ej(100,120,0.28)+Ed(120,10)+Ed(50,69);
+  const Ss=Sacc(0,15,0.69)+Sacc(15,35,0.51)+Sacc(35,50,0.42)+Sacc(50,70,0.40)+
+           Sct(70,50)+Sacc(70,50,0.69)+Sct(50,69)+Sacc(50,70,0.43)+Sct(70,50)+
+           Sacc(70,100,0.24)+Sct(100,30)+Sacc(100,120,0.28)+Sct(120,10)+
+           Sacc(120,80,0.69)+Sacc(80,50,1.04)+Sacc(50,0,1.39);
+
+  const S1=4*Su+Ss;   // km per NEDC cycle
+  const E1=4*Eu+Es;   // kWh per NEDC cycle
+  const Etotal=bp.Qm*bp.Ue/1000; // kWh total battery energy
+  return{S1,E1,Etotal,S:S1*Etotal/E1};
+}
+
+// Build NEDC speed-time profile (1s resolution)
+function buildNEDCProfile(){
+  const urban=[[11,0,0],[4,0,15],[8,15,15],[5,15,0],[21,0,0],[6,0,15],[6,15,32],[24,32,32],[11,32,0],[21,0,0],[6,0,15],[11,15,35],[9,35,50],[12,50,50],[8,50,35],[15,35,35],[10,35,0],[7,0,0]];
+  const suburban=[[20,0,0],[6,0,15],[11,15,35],[10,35,50],[14,50,70],[50,70,70],[8,70,50],[69,50,50],[13,50,70],[50,70,70],[35,70,100],[30,100,100],[20,100,120],[10,120,120],[16,120,80],[8,80,50],[10,50,0],[20,0,0]];
+  const tA=[0],vA=[0]; let tc=0;
+  function addSeg(dt,v0,v1){for(let i=1;i<=dt;i++){tc++;tA.push(tc);vA.push(v0+(v1-v0)*i/dt);}}
+  for(let k=0;k<4;k++) urban.forEach(s=>addSeg(s[0],s[1],s[2]));
+  suburban.forEach(s=>addSeg(s[0],s[1],s[2]));
+  return{tA,vA};
+}
+
+// ── MAIN CALC ──
+function calcAll(){
+  const p=getP(); const bp=getBP();
+  const{speeds,torques}=getMotorData();
+  if(speeds.length<2){alert('请至少输入 2 个电机数据点！');return;}
+
+  // Motor curve
+  const nArr=[],tArr=[],pArr=[];
+  for(let n=speeds[0];n<=speeds[speeds.length-1];n+=20){const T=lerpTq(n,speeds,torques);nArr.push(n);tArr.push(T);pArr.push(T*n/9550);}
+  const peakT=Math.max(...torques);
+  const peakP=Math.max(...pArr);
+  const nPeakP=nArr[pArr.indexOf(peakP)];
+  let nBase=speeds[0];
+  for(let i=1;i<speeds.length;i++){if(torques[i]<peakT*0.98){nBase=speeds[i-1];break;}nBase=speeds[i];}
+  const vMax_motor=0.377*p.r*speeds[speeds.length-1]/p.it;
+
+  // Dynamics arrays
+  const vArr=[],FtArr=[],FrArr=[],aArr=[],grArr=[];
+  for(let v=0.5;v<=vMax_motor;v+=0.5){vArr.push(v);FtArr.push(getFt(v,p,speeds,torques));FrArr.push(getFr(v,p));aArr.push(Math.max(0,getAcc(v,p,speeds,torques)));grArr.push(getGrade(v,p,speeds,torques));}
+  const vmax=findVmax(p,speeds,torques);
+  const t100=vmax>=100?calcT100(p,speeds,torques):null;
+  const{vtV,vtT}=calcVT(p,speeds,torques,vmax>=100?105:vmax);
+  const maxGrade=getGrade(1,p,speeds,torques);
+
+  // Economic
+  const nedcResult=calcNEDCCycle(p,bp);
+  const nedcProfile=buildNEDCProfile();
+
+  RES={p,bp,speeds,torques,nArr,tArr,pArr,vArr,FtArr,FrArr,aArr,grArr,vmax,t100,vtV,vtT,maxGrade,peakT,peakP,nPeakP,nBase,vMax_motor,nedcResult,nedcProfile};
+
+  ['motor','force','accel','vt','grade','fac','eco1','eco2','sum'].forEach(id=>{
+    const e=document.getElementById(id+'_empty'),c=document.getElementById(id+'_content');
+    if(e)e.style.display='none'; if(c)c.style.display='block';
+  });
+
+  drawMotor(); drawForce(); drawAccel(); drawVT(); drawGrade();
+  calcFactors();
+  drawEco1(); drawEco2();
+  buildSummary();
+  sw(1);
+}
+
+// ── CANVAS HELPERS ──
+function setupC(id,h){
+  const cv=document.getElementById(id);if(!cv)return{ctx:null,W:0,H:0};
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const W=cv.getBoundingClientRect().width||cv.offsetWidth||640;
+  cv.width=W*dpr; cv.height=h*dpr; cv.style.height=h+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,h);
+  return{ctx,W,H:h};
+}
+function frame(ctx,W,H,pd,x0,x1,y0,y1,xL,yL,title,nx=5,ny=5){
+  const cw=W-pd.l-pd.r,ch=H-pd.t-pd.b;
+  const tx=v=>pd.l+(v-x0)/(x1-x0)*cw, ty=v=>pd.t+ch-(v-y0)/(y1-y0)*ch;
+  ctx.fillStyle='#091520'; ctx.fillRect(pd.l,pd.t,cw,ch);
+  ctx.strokeStyle='#1a3045'; ctx.lineWidth=0.8;
+  for(let i=0;i<=nx;i++){const gx=pd.l+i/nx*cw;ctx.beginPath();ctx.moveTo(gx,pd.t);ctx.lineTo(gx,pd.t+ch);ctx.stroke();}
+  for(let i=0;i<=ny;i++){const gy=pd.t+i/ny*ch;ctx.beginPath();ctx.moveTo(pd.l,gy);ctx.lineTo(pd.l+cw,gy);ctx.stroke();}
+  ctx.strokeStyle='#3a6090'; ctx.lineWidth=1.5; ctx.strokeRect(pd.l,pd.t,cw,ch);
+  ctx.fillStyle='#90b8d8'; ctx.font='13px Courier New'; ctx.textAlign='center';
+  for(let i=0;i<=nx;i++){const v=x0+i/nx*(x1-x0);ctx.fillText(Math.abs(v)>=100?Math.round(v):(Math.abs(v)>=10?v.toFixed(1):v.toFixed(2)),pd.l+i/nx*cw,pd.t+ch+17);}
+  ctx.textAlign='right';
+  for(let i=0;i<=ny;i++){const v=y0+i/ny*(y1-y0);ctx.fillText(Math.abs(v)>=100?Math.round(v):(Math.abs(v)>=10?v.toFixed(1):v.toFixed(2)),pd.l-7,pd.t+ch-i/ny*ch+5);}
+  ctx.save();ctx.translate(16,pd.t+ch/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.font='bold 15px Microsoft YaHei';ctx.fillStyle='#a0ccee';ctx.fillText(yL,0,0);ctx.restore();
+  ctx.textAlign='center';ctx.font='bold 15px Microsoft YaHei';ctx.fillStyle='#a0ccee';ctx.fillText(xL,pd.l+cw/2,pd.t+ch+38);
+  ctx.font='bold 16px Microsoft YaHei';ctx.fillStyle='#e8f4ff';ctx.fillText(title,pd.l+cw/2,pd.t-12);
+  return{tx,ty,cw,ch};
+}
+function line(ctx,xs,ys,tx,ty,col,lw=2){
+  ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash([]);ctx.beginPath();
+  let f=true;xs.forEach((x,i)=>{const px=tx(x),py=ty(ys[i]);if(!isFinite(px)||!isFinite(py))return;f?ctx.moveTo(px,py):ctx.lineTo(px,py);f=false;});ctx.stroke();
+}
+function dottedLine(ctx,xs,ys,tx,ty,col,lw=1.5){
+  ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.setLineDash([5,4]);ctx.beginPath();
+  let f=true;xs.forEach((x,i)=>{const px=tx(x),py=ty(ys[i]);if(!isFinite(px)||!isFinite(py))return;f?ctx.moveTo(px,py):ctx.lineTo(px,py);f=false;});ctx.stroke();ctx.setLineDash([]);
+}
+function dot(ctx,px,py,col,r=5){ctx.fillStyle=col;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.stroke();}
+function legend(ctx,items,lx,ly){items.forEach((it,i)=>{ctx.strokeStyle=it.c;ctx.lineWidth=3;ctx.setLineDash(it.dash||[]);ctx.beginPath();ctx.moveTo(lx,ly+i*20);ctx.lineTo(lx+22,ly+i*20);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#b0d4f0';ctx.font='14px Microsoft YaHei';ctx.textAlign='left';ctx.fillText(it.l,lx+26,ly+i*20+5);});}
+function vline(ctx,px,y0,y1,col){ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(px,y0);ctx.lineTo(px,y1);ctx.stroke();ctx.setLineDash([]);}
+function annotate(ctx,text,px,py,col,align='left'){ctx.fillStyle=col;ctx.font='bold 14px Microsoft YaHei';ctx.textAlign=align;ctx.fillText(text,px,py);}
+
+// ── DRAW MOTOR ──
+function drawMotor(){
+  const{nArr,tArr,pArr,speeds,torques,peakT,peakP,nBase}=RES;
+  const nMax=speeds[speeds.length-1];
+  {const{ctx,W,H}=setupC('c_tn',310);const pd={l:75,r:18,t:36,b:55};const yMax=Math.ceil(peakT*1.2/50)*50;
+  const{tx,ty,ch}=frame(ctx,W,H,pd,0,nMax,0,yMax,'转速 n (r/min)','转矩 T (N·m)','转矩–转速特性 (T-n)');
+  line(ctx,nArr,tArr,tx,ty,'#29d0ff',2.5);speeds.forEach((n,i)=>{dot(ctx,tx(n),ty(torques[i]),'#ffd060',4);});
+  vline(ctx,tx(nBase),pd.t,pd.t+ch,'#2dffa080');annotate(ctx,`n₀=${nBase}`,tx(nBase)+3,pd.t+18,'#2dffa0');
+  legend(ctx,[{c:'#29d0ff',l:'T-n 插值曲线'},{c:'#ffd060',l:'原始数据点'}],pd.l+8,pd.t+10);}
+  {const{ctx,W,H}=setupC('c_pn',310);const pd={l:75,r:18,t:36,b:55};const yMax=Math.ceil(peakP*1.25/10)*10;
+  const{tx,ty}=frame(ctx,W,H,pd,0,nMax,0,yMax,'转速 n (r/min)','功率 P (kW)','功率–转速特性 (P-n)');
+  line(ctx,nArr,pArr,tx,ty,'#2dffa0',2.5);dot(ctx,tx(RES.nPeakP),ty(peakP),'#ffd060',6);
+  annotate(ctx,`Pm=${peakP.toFixed(1)}kW`,tx(RES.nPeakP)+6,ty(peakP)-8,'#ffd060');
+  legend(ctx,[{c:'#2dffa0',l:'P-n 曲线'}],pd.l+8,pd.t+10);}
+  document.getElementById('motor_stats').innerHTML=[
+    {l:'峰值转矩 Tₘ',v:`${peakT.toFixed(1)} N·m`,cls:'ok'},{l:'峰值功率 Pₘ',v:`${peakP.toFixed(1)} kW`,cls:'ok'},
+    {l:'电机基速',v:`${nBase} r/min`,cls:'hi'},{l:'最高转速对应车速',v:`${RES.vMax_motor.toFixed(1)} km/h`,cls:''},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── DRAW FORCE ──
+function drawForce(){
+  const{vArr,FtArr,FrArr,vmax,p}=RES;
+  const{ctx,W,H}=setupC('c_force',460);const pd={l:80,r:20,t:38,b:58};
+  const yMax=Math.ceil(Math.max(...FtArr)*1.1/1000)*1000,xMax=Math.ceil(vArr[vArr.length-1]/20)*20;
+  const{tx,ty,ch}=frame(ctx,W,H,pd,0,xMax,0,yMax,'车速 v (km/h)','力 (N)','驱动力–行驶阻力平衡图');
+  line(ctx,vArr,FrArr,tx,ty,'#506080',2);line(ctx,vArr,FtArr,tx,ty,'#29d0ff',2.5);
+  if(vmax>0){const px=tx(vmax);vline(ctx,px,pd.t,pd.t+ch,'#ff704080');dot(ctx,px,ty(getFr(vmax,p)),'#ff7040',6);annotate(ctx,`vₘₐₓ=${vmax.toFixed(1)}`,px+5,pd.t+22,'#ff7040');}
+  legend(ctx,[{c:'#29d0ff',l:'驱动力 Ft'},{c:'#506080',l:'行驶阻力 Fr'}],pd.l+10,pd.t+12);
+  document.getElementById('force_stats').innerHTML=[
+    {l:'最高车速',v:`${vmax.toFixed(1)} km/h`,cls:'ok'},{l:'最大驱动力',v:`${Math.max(...FtArr).toFixed(0)} N`,cls:'hi'},
+    {l:'滚动阻力',v:`${getFf(p).toFixed(0)} N`,cls:''},{l:'最大爬坡度',v:`${RES.maxGrade.toFixed(2)} %`,cls:'ok'},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── DRAW ACCEL ──
+function drawAccel(){
+  const{vArr,aArr,vmax}=RES;
+  const{ctx,W,H}=setupC('c_accel',450);const pd={l:75,r:20,t:38,b:58};
+  const yMax=Math.ceil(Math.max(...aArr)*1.2*2)/2,xMax=Math.ceil(vArr[vArr.length-1]/20)*20;
+  const{tx,ty}=frame(ctx,W,H,pd,0,xMax,0,yMax,'车速 v (km/h)','加速度 a (m/s²)','最大加速度–速度曲线');
+  line(ctx,vArr,aArr,tx,ty,'#29d0ff',2.5);
+  const aMax=Math.max(...aArr),vAtAmax=vArr[aArr.indexOf(aMax)];
+  dot(ctx,tx(vAtAmax),ty(aMax),'#ffd060',5);annotate(ctx,`a=${aMax.toFixed(2)} m/s²`,tx(vAtAmax)+8,ty(aMax)-6,'#ffd060');
+  document.getElementById('accel_stats').innerHTML=[
+    {l:'最大加速度',v:`${aMax.toFixed(2)} m/s²`,cls:'ok'},{l:'0-100加速时间',v:RES.t100?`${RES.t100.toFixed(2)} s`:'不可达',cls:RES.t100?'ok':'wa'},
+    {l:'最高车速',v:`${vmax.toFixed(1)} km/h`,cls:'hi'},{l:'对应车速',v:`${vAtAmax.toFixed(1)} km/h`,cls:''},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── DRAW VT ──
+function drawVT(){
+  const{vtV,vtT,t100,vmax}=RES;
+  const{ctx,W,H}=setupC('c_vt',450);const pd={l:75,r:20,t:38,b:58};
+  const tMax=Math.ceil(vtT[vtT.length-1]/5)*5+2,vMax=Math.max(110,vmax+10);
+  const{tx,ty,ch}=frame(ctx,W,H,pd,0,tMax,0,vMax,'时间 t (s)','速度 v (km/h)','速度–时间曲线');
+  line(ctx,vtT,vtV,tx,ty,'#2dffa0',2.5);
+  dottedLine(ctx,[0,tMax],[100,100],tx,ty,'#ffd06080',1);
+  if(t100&&t100<9000){const px=tx(t100);vline(ctx,px,pd.t,pd.t+ch,'#ff704070');dot(ctx,px,ty(100),'#ff7040',6);annotate(ctx,`t₁₀₀=${t100.toFixed(2)}s`,px+6,ty(100)-10,'#ff7040');}
+  document.getElementById('vt_stats').innerHTML=[
+    {l:'0-100加速时间',v:t100&&t100<9000?`${t100.toFixed(2)} s`:'不可达',cls:t100&&t100<9000?'ok':'wa'},
+    {l:'最高车速',v:`${vmax.toFixed(1)} km/h`,cls:'hi'},{l:'仿真时长',v:`${vtT[vtT.length-1].toFixed(1)} s`,cls:''},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── DRAW GRADE ──
+function drawGrade(){
+  const{vArr,grArr,vmax,maxGrade}=RES;
+  const{ctx,W,H}=setupC('c_grade',450);const pd={l:78,r:20,t:38,b:58};
+  const yMax=Math.ceil(maxGrade*1.2/5)*5,xMax=Math.ceil(vArr[vArr.length-1]/20)*20;
+  const{tx,ty}=frame(ctx,W,H,pd,0,xMax,0,yMax,'车速 v (km/h)','爬坡度 i (%)','最大爬坡度–速度曲线');
+  line(ctx,vArr,grArr,tx,ty,'#2dffa0',2.5);
+  dot(ctx,tx(vArr[0]),ty(grArr[0]),'#ffd060',5);annotate(ctx,`i_max≈${maxGrade.toFixed(2)}%`,tx(vArr[0])+8,ty(grArr[0])-8,'#ffd060');
+  document.getElementById('grade_stats').innerHTML=[
+    {l:'最大爬坡度',v:`${maxGrade.toFixed(2)} %`,cls:'ok'},{l:'50km/h爬坡度',v:`${getGrade(50,RES.p,RES.speeds,RES.torques).toFixed(2)} %`,cls:''},{l:'最高车速',v:`${vmax.toFixed(1)} km/h`,cls:'hi'},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── FACTOR ANALYSIS ──
+function calcFactors(){
+  const{p,speeds,torques,peakP}=RES; const N=40;
+  function analyze(p2,spds,trqs){const vm=findVmaxExt(p2,spds,trqs);return{vm,t:vm>=100?calcT100(p2,spds,trqs):null};}
+  const pm_x=[],pm_vm=[],pm_t=[],pm_g50=[],pm_g70=[],pm_g90=[];
+  const pmMin=peakP*0.5,pmMax=peakP*1.6;
+  for(let i=0;i<=N;i++){const pm=pmMin+i/N*(pmMax-pmMin),r=pm/peakP,sT=torques.map(t=>t*r);const{vm,t}=analyze(p,speeds,sT);pm_x.push(pm);pm_vm.push(vm);pm_t.push(t);pm_g50.push(getGrade(50,p,speeds,sT));pm_g70.push(getGrade(70,p,speeds,sT));pm_g90.push(getGrade(90,p,speeds,sT));}
+  const m_x=[],m_vm=[],m_t=[],m_g50=[],m_g70=[],m_g90=[];
+  for(let i=0;i<=N;i++){const m=900+i/N*1600;const p2={...p,m};const{vm,t}=analyze(p2,speeds,torques);m_x.push(m);m_vm.push(vm);m_t.push(t);m_g50.push(getGrade(50,p2,speeds,torques));m_g70.push(getGrade(70,p2,speeds,torques));m_g90.push(getGrade(90,p2,speeds,torques));}
+  const m_an_pairs=[];
+  for(let u=50;u<=230;u+=0.5){const ma=(3600*peakP*p.eta/u-p.Cd*p.A*u*u/21.15)/(GRAV*p.f);if(ma>100&&ma<8000)m_an_pairs.push([ma,u]);}
+  m_an_pairs.sort((a,b)=>a[0]-b[0]);
+  const m_an_x=m_an_pairs.map(pt=>pt[0]),m_an_y=m_an_pairs.map(pt=>pt[1]);
+  const cd_x=[],cd_vm=[],cd_t=[],cd_g50=[],cd_g70=[],cd_g90=[];
+  for(let i=0;i<=N;i++){const Cd=0.15+i/N*0.65;const p2={...p,Cd};const{vm,t}=analyze(p2,speeds,torques);cd_x.push(Cd);cd_vm.push(vm);cd_t.push(t);cd_g50.push(getGrade(50,p2,speeds,torques));cd_g70.push(getGrade(70,p2,speeds,torques));cd_g90.push(getGrade(90,p2,speeds,torques));}
+  RES.fac={pm_x,pm_vm,pm_t,pm_g50,pm_g70,pm_g90,m_x,m_vm,m_t,m_g50,m_g70,m_g90,m_an_x,m_an_y,cd_x,cd_vm,cd_t,cd_g50,cd_g70,cd_g90};
+  drawFac0();drawFac1();drawFac2();
+}
+function facChart(id,h,xs,ysList,labels,xL,yL,title){
+  const{ctx,W,H}=setupC(id,h);if(!ctx)return;
+  const pd={l:78,r:20,t:36,b:55};
+  let yMin=Infinity,yMax=-Infinity;
+  ysList.forEach(ys=>ys.forEach(y=>{if(y!=null&&isFinite(y)){yMin=Math.min(yMin,y);yMax=Math.max(yMax,y);}}));
+  if(!isFinite(yMin))return;
+  const yPad=(yMax-yMin)*0.15||5;
+  const{tx,ty}=frame(ctx,W,H,pd,xs[0],xs[xs.length-1],Math.max(0,yMin-yPad),yMax+yPad,xL,yL,title);
+  ysList.forEach((ys,ki)=>{const xs2=[],ys2=[];xs.forEach((x,i)=>{if(ys[i]!=null&&ys[i]<9000){xs2.push(x);ys2.push(ys[i]);}});line(ctx,xs2,ys2,tx,ty,LC[ki],2.2);});
+  legend(ctx,labels.map((l,i)=>({c:LC[i],l})),pd.l+8,pd.t+10);
+}
+function drawFac0(){const f=RES.fac;facChart('cf_pm_vmax',280,f.pm_x,[f.pm_vm],[`Pm₀=${RES.peakP.toFixed(1)} kW`],'峰值功率 Pm (kW)','最高车速 (km/h)','峰值功率 → 最高车速');facChart('cf_pm_t100',280,f.pm_x,[f.pm_t.map(t=>t&&t<9000?t:null)],['0-100加速时间'],'峰值功率 Pm (kW)','加速时间 (s)','峰值功率 → 加速时间');facChart('cf_pm_grade',260,f.pm_x,[f.pm_g50,f.pm_g70,f.pm_g90],['50 km/h','70 km/h','90 km/h'],'峰值功率 Pm (kW)','爬坡度 i (%)','峰值功率 → 最大爬坡度');}
+function drawFac1(){const f=RES.fac;facChart('cf_m_vmax',280,f.m_an_x,[f.m_an_y],[`式7-16 解析 (Pm=${RES.peakP.toFixed(1)}kW)`],'整车质量 m (kg)','最高车速 (km/h)','整车质量 → 最高车速');facChart('cf_m_t100',280,f.m_x,[f.m_t.map(t=>t&&t<9000?t:null)],['0-100加速时间'],'整车质量 m (kg)','加速时间 (s)','整车质量 → 加速时间');facChart('cf_m_grade',260,f.m_x,[f.m_g50,f.m_g70,f.m_g90],['50 km/h','70 km/h','90 km/h'],'整车质量 m (kg)','爬坡度 i (%)','整车质量 → 最大爬坡度');}
+function drawFac2(){const f=RES.fac;facChart('cf_cd_vmax',280,f.cd_x,[f.cd_vm],['最高车速'],'空气阻力系数 Cᴅ','最高车速 (km/h)','空气阻力系数 → 最高车速');facChart('cf_cd_t100',280,f.cd_x,[f.cd_t.map(t=>t&&t<9000?t:null)],['0-100加速时间'],'空气阻力系数 Cᴅ','加速时间 (s)','空气阻力系数 → 加速时间');facChart('cf_cd_grade',260,f.cd_x,[f.cd_g50,f.cd_g70,f.cd_g90],['50 km/h','70 km/h','90 km/h'],'空气阻力系数 Cᴅ','爬坡度 i (%)','空气阻力系数 → 最大爬坡度');}
+
+// ── ECONOMIC DRAW HELPERS ──
+const U_ARR=[];for(let u=30;u<=100;u+=1)U_ARR.push(u);
+
+function ecoLineChart(id,h,uArr,seriesList,labels,title,yLabel){
+  const{ctx,W,H}=setupC(id,h);if(!ctx)return;
+  const pd={l:80,r:22,t:38,b:58};
+  let yMin=Infinity,yMax=-Infinity;
+  seriesList.forEach(s=>s.forEach(v=>{if(isFinite(v)){yMin=Math.min(yMin,v);yMax=Math.max(yMax,v);}}));
+  if(!isFinite(yMin))return;
+  const pad=(yMax-yMin)*0.12||20;
+  const{tx,ty}=frame(ctx,W,H,pd,uArr[0],uArr[uArr.length-1],Math.max(0,yMin-pad),yMax+pad,'车速 u (km/h)',yLabel,title);
+  seriesList.forEach((s,i)=>line(ctx,uArr,s,tx,ty,LC[i],2.2));
+  legend(ctx,labels.map((l,i)=>({c:LC[i],l})),pd.l+10,pd.t+10);
+}
+
+function ecoSensChart(id,h,xArr,yArr,xLabel,yLabel,title,curVal,curLabel){
+  const{ctx,W,H}=setupC(id,h);if(!ctx)return;
+  const pd={l:80,r:22,t:38,b:58};
+  const yMin=Math.min(...yArr)*0.9,yMax=Math.max(...yArr)*1.1;
+  const{tx,ty,ch}=frame(ctx,W,H,pd,xArr[0],xArr[xArr.length-1],yMin,yMax,xLabel,yLabel,title);
+  line(ctx,xArr,yArr,tx,ty,'#c070ff',2.5);
+  if(curVal>=xArr[0]&&curVal<=xArr[xArr.length-1]){
+    const idx=Math.round((curVal-xArr[0])/(xArr[xArr.length-1]-xArr[0])*(xArr.length-1));
+    if(idx>=0&&idx<yArr.length){
+      const px=tx(curVal),py=ty(yArr[idx]);
+      vline(ctx,px,pd.t,pd.t+ch,'#ffd06060');dot(ctx,px,py,'#ffd060',6);
+      annotate(ctx,`${curLabel}=${yArr[idx].toFixed(0)} km`,px+8,py-8,'#ffd060');
+    }
+  }
+  legend(ctx,[{c:'#c070ff',l:yLabel}],pd.l+10,pd.t+10);
+}
+
+// ── DRAW CASE 8 ──
+function drawEco1(){
+  const{p,bp}=RES;
+  const Qm=bp.Qm,Ue=bp.Ue,etae=bp.etae;
+
+  // Base chart: 3 Qm values
+  const qmVals=[Qm*0.8,Qm,Qm*1.2];
+  const baseSeries=qmVals.map(q=>U_ARR.map(u=>constRange(u,p,{...bp,Qm:q})));
+  const baseLabels=qmVals.map(q=>`Qₘ=${q.toFixed(0)} A·h`);
+  ecoLineChart('ec1_base',380,U_ARR,baseSeries,baseLabels,'等速续驶里程（不同电池容量）','续驶里程 Sd (km)');
+
+  // Qm influence
+  const qmVals2=[Qm-20,Qm,Qm+20];
+  ecoLineChart('ec1_qm',380,U_ARR,qmVals2.map(q=>U_ARR.map(u=>constRange(u,p,{...bp,Qm:q}))),qmVals2.map(q=>`Qₘ=${q.toFixed(0)} A·h`),'图8-1 电池容量对续驶里程的影响','续驶里程 Sd (km)');
+
+  // m influence
+  const mVals=[1000,1200,1400];
+  ecoLineChart('ec1_m',380,U_ARR,mVals.map(m=>U_ARR.map(u=>constRange(u,{...p,m},bp))),mVals.map(m=>`m=${m} kg`),'图8-2 整车质量对续驶里程的影响','续驶里程 Sd (km)');
+
+  // f influence
+  const fVals=[0.010,0.012,0.014];
+  ecoLineChart('ec1_f',380,U_ARR,fVals.map(f=>U_ARR.map(u=>constRange(u,{...p,f},bp))),fVals.map(f=>`f=${f}`),'图8-3 滚动阻力系数对续驶里程的影响','续驶里程 Sd (km)');
+
+  // Cd influence
+  const cdVals=[0.24,0.28,0.32];
+  ecoLineChart('ec1_cd',380,U_ARR,cdVals.map(Cd=>U_ARR.map(u=>constRange(u,{...p,Cd},bp))),cdVals.map(Cd=>`Cᴅ=${Cd}`),'图8-4 空气阻力系数对续驶里程的影响','续驶里程 Sd (km)');
+
+  // ηt influence (combined ηt×ηj)
+  const etaVals=[p.eta*bp.etaj*0.85/0.9,p.eta*bp.etaj,p.eta*bp.etaj*0.95/0.9];
+  // More meaningful: fix etaj, vary eta
+  const etaValsD=[0.85,0.90,0.95];
+  ecoLineChart('ec1_eta',380,U_ARR,etaValsD.map(eta=>U_ARR.map(u=>constRange(u,{...p,eta},bp))),etaValsD.map(e=>`ηₜ=${e}（×ηⱼ=${bp.etaj}）`),'图8-5/8-6 传动效率对续驶里程的影响','续驶里程 Sd (km)');
+
+  // ηe influence
+  const etaeVals=[0.90,0.95,1.00];
+  ecoLineChart('ec1_etae',380,U_ARR,etaeVals.map(ee=>U_ARR.map(u=>constRange(u,p,{...bp,etae:ee}))),etaeVals.map(e=>`ηₑ=${e}`),'图8-7 电池放电效率对续驶里程的影响','续驶里程 Sd (km)');
+
+  // Stats
+  const S60=constRange(60,p,bp),S80=constRange(80,p,bp),S100=constRange(100,p,bp);
+  const Etot=bp.Qm*bp.Ue/1000;
+  document.getElementById('eco1_stats').innerHTML=[
+    {l:'60 km/h 续驶里程',v:`${S60.toFixed(0)} km`,cls:'ok'},{l:'80 km/h 续驶里程',v:`${S80.toFixed(0)} km`,cls:'ok'},
+    {l:'100 km/h 续驶里程',v:`${S100.toFixed(0)} km`,cls:'hi'},{l:'电池总能量',v:`${Etot.toFixed(1)} kWh`,cls:'pu'},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── DRAW CASE 9 ──
+function drawEco2(){
+  const{p,bp,nedcResult,nedcProfile}=RES;
+  const{tA,vA}=nedcProfile;
+  const{S1,E1,Etotal,S}=nedcResult;
+
+  // NEDC profile chart
+  {const{ctx,W,H}=setupC('ec2_nedc',250);if(!ctx)return;
+  const pd={l:75,r:20,t:38,b:55};
+  const{tx,ty,cw,ch}=frame(ctx,W,H,pd,0,1200,0,140,'时间 t (s)','车速 v (km/h)','NEDC 循环工况速度–时间曲线',8,7);
+  // Shade urban and suburban regions
+  ctx.fillStyle='rgba(41,208,255,0.05)';ctx.fillRect(tx(0),pd.t,tx(780)-tx(0),ch);
+  ctx.fillStyle='rgba(192,112,255,0.07)';ctx.fillRect(tx(780),pd.t,tx(1180)-tx(780),ch);
+  // Labels
+  ctx.fillStyle='rgba(41,208,255,0.6)';ctx.font='11px Microsoft YaHei';ctx.textAlign='center';ctx.fillText('市区循环（×4）',tx(390),pd.t+14);
+  ctx.fillStyle='rgba(192,112,255,0.7)';ctx.fillText('市郊循环（×1）',tx(980),pd.t+14);
+  // Speed profile
+  line(ctx,tA,vA,tx,ty,'#29d0ff',1.8);
+  // 780s divider
+  vline(ctx,tx(780),pd.t,pd.t+ch,'#c070ff60');}
+
+  // Influence charts
+  const N=40;
+
+  // m vs NEDC range
+  const mArr=[];for(let i=0;i<=N;i++)mArr.push(1000+i/N*500);
+  const mS=mArr.map(m=>calcNEDCCycle({...p,m},bp).S);
+  ecoSensChart('ec2_m',320,mArr,mS,'整车质量 m (kg)','NEDC续驶里程 (km)','整车质量对NEDC续驶里程的影响（图9-2）',p.m,'当前质量');
+
+  // f vs NEDC range
+  const fArr=[];for(let i=0;i<=N;i++)fArr.push(0.010+i/N*0.010);
+  const fS=fArr.map(f=>calcNEDCCycle({...p,f},bp).S);
+  ecoSensChart('ec2_f',320,fArr,fS,'滚动阻力系数 f','NEDC续驶里程 (km)','滚动阻力系数对NEDC续驶里程的影响（图9-3）',p.f,'当前值');
+
+  // Cd vs NEDC range
+  const cdArr=[];for(let i=0;i<=N;i++)cdArr.push(0.20+i/N*0.20);
+  const cdS=cdArr.map(Cd=>calcNEDCCycle({...p,Cd},bp).S);
+  ecoSensChart('ec2_cd',320,cdArr,cdS,'空气阻力系数 Cᴅ','NEDC续驶里程 (km)','空气阻力系数对NEDC续驶里程的影响（图9-4）',p.Cd,'当前值');
+
+  // ηt vs NEDC range
+  const etaArr=[];for(let i=0;i<=N;i++)etaArr.push(0.80+i/N*0.20);
+  const etaS=etaArr.map(eta=>calcNEDCCycle({...p,eta},bp).S);
+  ecoSensChart('ec2_eta',320,etaArr,etaS,'传动效率 ηₜ','NEDC续驶里程 (km)','传动效率对NEDC续驶里程的影响（图9-5）',p.eta,'当前值');
+
+  // ηe vs NEDC range
+  const etaeArr=[];for(let i=0;i<=N;i++)etaeArr.push(0.80+i/N*0.20);
+  const etaeS=etaeArr.map(etae=>calcNEDCCycle(p,{...bp,etae}).S);
+  ecoSensChart('ec2_etae',320,etaeArr,etaeS,'放电效率 ηₑ','NEDC续驶里程 (km)','放电效率对NEDC续驶里程的影响（图9-7）',bp.etae,'当前值');
+
+  // Battery energy vs NEDC range
+  const EArr=[];for(let i=0;i<=N;i++)EArr.push(15+i/N*55); // 15~70 kWh
+  const ES=EArr.map(E=>{const Qm=E*1000/bp.Ue;return calcNEDCCycle(p,{...bp,Qm}).S;});
+  ecoSensChart('ec2_E',320,EArr,ES,'电池能量 E (kWh)','NEDC续驶里程 (km)','电池能量对NEDC续驶里程的影响（图9-8）',Etotal,'当前');
+
+  // Stats
+  document.getElementById('eco2_stats').innerHTML=[
+    {l:'单次NEDC行驶里程',v:`${S1.toFixed(2)} km`,cls:'hi'},{l:'单次NEDC能耗',v:`${(E1*1000).toFixed(1)} Wh`,cls:'hi'},
+    {l:'电池总能量',v:`${Etotal.toFixed(1)} kWh`,cls:'pu'},{l:'NEDC续驶里程',v:`${S.toFixed(0)} km`,cls:'ok'},
+    {l:'百公里能耗',v:`${(E1/S1*100).toFixed(2)} kWh/100km`,cls:''},{l:'能耗比',v:`${(Etotal/S*100).toFixed(2)} kWh/100km`,cls:''},
+  ].map(s=>`<div class="sc ${s.cls}"><div class="sl2">${s.l}</div><div class="sv">${s.v}</div></div>`).join('');
+}
+
+// ── SUMMARY ──
+function buildSummary(){
+  const{p,bp,vmax,t100,maxGrade,peakT,peakP,nBase,speeds,torques,nedcResult}=RES;
+  const{S1,E1,S}=nedcResult;
+  const S60=constRange(60,p,bp),S80=constRange(80,p,bp);
+  const rows=[
+    ['峰值转矩 Tₘ',`${peakT.toFixed(1)} N·m`,'电机数据最大值'],
+    ['峰值功率 Pₘ',`${peakP.toFixed(1)} kW`,'max(T·n/9550)'],
+    ['电机基速 n₀',`${nBase} r/min`,'恒转矩区上限'],
+    ['最高车速 vₘₐₓ',`${vmax.toFixed(1)} km/h`,'Ft=Fr 交点'],
+    ['0~100加速时间',t100&&t100<9000?`${t100.toFixed(2)} s`:'不可达','梯形积分'],
+    ['最大爬坡度',`${maxGrade.toFixed(2)} %`,'低速极限'],
+    ['电池总能量',`${(bp.Qm*bp.Ue/1000).toFixed(1)} kWh`,'Qₘ·Uₑ/1000'],
+    ['60 km/h 等速续驶',`${S60.toFixed(0)} km`,'实例八 解析公式'],
+    ['80 km/h 等速续驶',`${S80.toFixed(0)} km`,'实例八 解析公式'],
+    ['NEDC单次行驶里程',`${S1.toFixed(2)} km`,'4×市区+1×市郊'],
+    ['NEDC单次能耗',`${(E1*1000).toFixed(0)} Wh`,'加速+等速段合计'],
+    ['NEDC续驶里程',`${S.toFixed(0)} km`,'S₁×E_总/E₁'],
+  ];
+  document.getElementById('sum_body').innerHTML=rows.map(r=>`<tr><td><b>${r[0]}</b></td><td style="color:var(--grn);font-family:var(--mono);font-weight:700">${r[1]}</td><td style="color:var(--mut);font-size:11px">${r[2]}</td></tr>`).join('');
+  document.getElementById('sum_params').innerHTML=`<div class="g3">${[
+    ['整车质量 m',`${p.m} kg`],['轮胎半径 r',`${p.r} m`],['空气阻力系数 Cd',p.Cd],
+    ['迎风面积 A',`${p.A} m²`],['滚动阻力系数 f',p.f],['传动效率 ηₜ',p.eta],
+    ['旋转质量系数 δ',p.delta],['总传动比 iₜ',p.it],['电池容量 Qₘ',`${bp.Qm} A·h`],
+    ['额定电压 Uₑ',`${bp.Ue} V`],['放电效率 ηₑ',bp.etae],['机械传动效率 ηⱼ',bp.etaj],
+  ].map(([k,v])=>`<div class="rr"><span class="l">${k}</span><span class="v">${v}</span></div>`).join('')}</div>`;
+}
+
+window.addEventListener('load',()=>{
+  buildMotorTable(DEF_SPD,DEF_TRQ);
+  // On mobile, start with sidebar collapsed
+  if(window.innerWidth<=768){
+    const sb=document.getElementById('sidebar');
+    if(sb){sb.classList.remove('expanded');sb.classList.add('collapsed');}
+  }
+});
+
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  if(!sb)return;
+  const collapsed=sb.classList.contains('collapsed');
+  sb.classList.toggle('collapsed',!collapsed);
+  sb.classList.toggle('expanded',collapsed);
+  document.getElementById('sidebarToggle').textContent=collapsed?'☰ 收起参数面板':'☰ 展开参数面板';
+}
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+if (e.key === 'F12' || 
+(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+(e.ctrlKey && e.key === 'U') ||
+(e.ctrlKey && e.key === 'S')) {
+e.preventDefault();
+return false;
+}
+});
+</script>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U') ||
+        (e.ctrlKey && e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
+</body>
+</html>
